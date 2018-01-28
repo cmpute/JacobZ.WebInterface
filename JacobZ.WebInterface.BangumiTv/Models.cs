@@ -46,7 +46,7 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 条目章节数
         /// </summary>
-        public int? EpisodeCount { get; set; }
+        public int? MainEpisodeCount { get; set; }
 
         /// <summary>
         /// 放送/上线日期
@@ -253,14 +253,14 @@ namespace JacobZ.WebInterface.BangumiTv
     }
 
     /// <summary>
-    /// 代表收藏条目
+    /// 代表条目收藏
     /// </summary>
     public class Collection
     {
         /// <summary>
         /// 收藏评分
         /// </summary>
-        public uint Rating { get; set; }
+        public uint? Rating { get; set; }
 
         /// <summary>
         /// 收藏吐槽
@@ -273,14 +273,27 @@ namespace JacobZ.WebInterface.BangumiTv
         public List<string> Tag { get; set; }
 
         /// <summary>
+        /// 收藏状态
+        /// </summary>
+        [JsonConverter(typeof(CollectionStatusConverter))]
+        public CollectionStatus Status { get; set; }
+
+        /// <summary>
         /// 观看到的最新集数
         /// </summary>
-        public int? EpStatus { get; set; }
+        [JsonProperty("ep_status")]
+        public int? LastEpisode { get; set; }
         
         /// <summary>
         /// 上次更新收藏状态的时间
         /// </summary>
+        [JsonConverter(typeof(UnixDateTimeConverter))]
         public DateTimeOffset? LastTouch { get; set; }
+
+        /// <summary>
+        /// 收藏的条目对象
+        /// </summary>
+        public Subject Subject { get; set; }
 
         /// <summary>
         /// 收藏对象所属的用户
@@ -422,6 +435,7 @@ namespace JacobZ.WebInterface.BangumiTv
     /// <summary>
     /// 代表人物的额外信息
     /// </summary>
+    // TODO: http://bangumi.tv/person/5639 里有提到忌日
     public class PersonInformation
     {
         /// <summary>
@@ -458,9 +472,10 @@ namespace JacobZ.WebInterface.BangumiTv
         public string Weight { get; set; }
 
         /// <summary>
-        /// 三围
+        /// 三围描述
         /// </summary>
-        public int[] BWH { get; set; }
+        // TODO: 转换为三个数字
+        public string BWH { get; set; }
 
         /// <summary>
         /// 信息来源
@@ -544,8 +559,9 @@ namespace JacobZ.WebInterface.BangumiTv
         public string Sign { get; set; }
 
         /// <summary>
-        /// 用户认证字符串
+        /// 认证字符串，仅登陆时有用
         /// </summary>
+        [JsonProperty("auth")]
         public string Authentication { get; set; }
     }
 

@@ -9,21 +9,32 @@ namespace JacobZ.WebInterface.Test.BangumiTv
     [TestClass]
     public class ApiCoreTests
     {
+        const string TestUsername = "107234662@qq.com";
+        const string TestPassword = "test123456";
+        User user;
+
+        [TestInitialize]
+        public async Task Login()
+        {
+            ApiCore.ApplicationName = "Test";
+            user = await ApiCore.Authenticate(TestUsername, TestPassword);
+        }
+
+        // 验证用户是否正确序列化
+        private void ValidateUser(User user)
+        {
+            Assert.IsTrue(user.ID > 0);
+            Assert.IsFalse(string.IsNullOrEmpty(user.NickName));
+            Assert.IsFalse(string.IsNullOrEmpty(user.UserName));
+            Assert.IsTrue(user.Avatar.Large.StartsWith("http://lain.bgm.tv/pic/user/l/"));
+            Assert.IsTrue(user.Avatar.Medium.StartsWith("http://lain.bgm.tv/pic/user/m/"));
+            Assert.IsTrue(user.Avatar.Small.StartsWith("http://lain.bgm.tv/pic/user/s/"));
+            Assert.IsNull(user.Authentication);
+        }
+
         [TestMethod]
         public async Task GetSubjectTest()
         {
-            // 验证用户是否正确序列化
-            void ValidateUser(User user)
-            {
-                Assert.IsTrue(user.ID > 0);
-                Assert.IsFalse(string.IsNullOrEmpty(user.NickName));
-                Assert.IsFalse(string.IsNullOrEmpty(user.UserName));
-                Assert.IsTrue(user.Avatar.Large.StartsWith("http://lain.bgm.tv/pic/user/l/"));
-                Assert.IsTrue(user.Avatar.Medium.StartsWith("http://lain.bgm.tv/pic/user/m/"));
-                Assert.IsTrue(user.Avatar.Small.StartsWith("http://lain.bgm.tv/pic/user/s/"));
-                Assert.IsNull(user.Sign);
-            }
-
             // 妄想学生会
             var subject = await ApiCore.GetSubject(5649, false);
             Assert.AreEqual(5649u, subject.ID);
@@ -51,7 +62,7 @@ namespace JacobZ.WebInterface.Test.BangumiTv
             Assert.IsTrue(subject.CollectionStats[CollectionStatus.Wish] > 0);
 
             // eps
-            Assert.IsNull(subject.EpisodeCount);
+            Assert.IsNull(subject.MainEpisodeCount);
             Assert.AreEqual(13, subject.Episodes.Count);
             var episode = subject.Episodes[0];
             Assert.AreEqual(37158u, episode.ID);
@@ -133,12 +144,59 @@ namespace JacobZ.WebInterface.Test.BangumiTv
             Assert.AreEqual("生徒会役員共", subject.Name);
             Assert.AreEqual("妄想学生会", subject.ChineseName);
             Assert.AreEqual(146, subject.Summary.Length);
-            Assert.AreEqual(13, subject.EpisodeCount);
+            Assert.AreEqual(13, subject.MainEpisodeCount);
             Assert.IsNull(subject.Episodes);
 
             // 小林家的女仆龙 
             //await ApiCore.GetSubject(179949, true);
             //await ApiCore.GetSubject(179949, false);
+        }
+
+        [TestMethod]
+        public async Task AuthenticateTest()
+        {
+            var user = await ApiCore.Authenticate(TestUsername, TestPassword);
+            Assert.AreEqual(398274u, user.ID);
+            Assert.AreEqual("测试账号", user.NickName);
+            Assert.AreEqual("testacc", user.UserName);
+            Assert.AreEqual(100, user.Authentication.Length);
+        }
+
+        [TestMethod]
+        public async Task GetUserTest()
+        {
+            var user1 = await ApiCore.GetUser(398274);
+            Assert.AreEqual("testacc", user1.UserName);
+            var user2 = await ApiCore.GetUser("testacc");
+            Assert.AreEqual(398274u, user2.ID);
+
+            Assert.AreEqual(user1.NickName, user2.NickName);
+            ValidateUser(user1);
+            ValidateUser(user2);
+        }
+
+        [TestMethod]
+        public async Task GetWatchingCollectionsTest()
+        {
+            var collections = await ApiCore.GetWatchingCollections(user);
+            Assert.IsTrue(collections.Count() >= 0);
+            var collection = collections.First();
+            Assert.IsNotNull(collection.LastEpisode);
+            Assert.IsNotNull(collection.Subject);
+        }
+
+        [TestMethod]
+        public async Task GetNotificationCountTest()
+        {
+            Assert.IsTrue(await ApiCore.GetNotificationCount(user) >= 0);
+        }
+
+        [TestMethod]
+        public async Task GetSubjectProgressTest()
+        {
+            var statusDic = await ApiCore.GetSubjectProgress(user, 179949);
+            var subject = await ApiCore.GetSubject(179949, false);
+            Assert.IsTrue(statusDic.Count >= 0 && statusDic.Count <= subject.Episodes.Count);
         }
     }
 }

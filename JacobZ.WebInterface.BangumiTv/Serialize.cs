@@ -141,5 +141,12 @@ namespace JacobZ.WebInterface.BangumiTv
 
         }
     }
-}
 
+    internal class CollectionStatusConverter : ReadOnlyConverterBase<CollectionStatus>
+    {
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            return JObject.Load(reader)["type"].Value<CollectionStatus>();
+        }
+    }
+}
