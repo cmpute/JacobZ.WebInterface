@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace JacobZ.WebInterface.BangumiTv
 {
@@ -17,6 +19,7 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 条目类型
         /// </summary>
+        [JsonConverter(typeof(StringEnumConverter))]
         public SubjectType Type { get; set; }
 
         /// <summary>
@@ -27,6 +30,7 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 条目中文标题
         /// </summary>
+        [JsonProperty("name_cn")]
         public string ChineseName { get; set; }
 
         /// <summary>
@@ -40,19 +44,28 @@ namespace JacobZ.WebInterface.BangumiTv
         public IReadOnlyList<Episode> Episodes { get; set; }
 
         /// <summary>
-        /// 放送/上线时间
+        /// 条目章节数
         /// </summary>
-        public DateTimeOffset AirDate { get; set; }
+        public int? EpisodeCount { get; set; }
 
         /// <summary>
-        /// 放松星期
+        /// 放送/上线日期
         /// </summary>
+        [JsonProperty("air_date")]
+        public DateTime AirDate { get; set; }
+
+        /// <summary>
+        /// 放送星期
+        /// </summary>
+        [JsonProperty("air_weekday")]
+        [JsonConverter(typeof(DayOfWeekConverter))]
         public DayOfWeek AirWeekday { get; set; }
 
         /// <summary>
-        /// 评分。数组给出了不同分数打分的人数
+        /// 评分。数组给出了不同分数打分的人数，数组中分数从为10到1
         /// </summary>
-        public int[] Rating { get; set; }
+        [JsonConverter(typeof(RatingConverter))]
+        public uint[] Rating { get; set; }
 
         /// <summary>
         /// 在同类条目中的评分排名
@@ -67,19 +80,34 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 条目收藏统计。字典给出了不同收藏状态的人数
         /// </summary>
+        [JsonProperty("collection")]
         public IReadOnlyDictionary<CollectionStatus, uint> CollectionStats { get; set; }
 
         /// <summary>
         /// 角色列表，键值为角色对应的演员/声优列表
         /// </summary>
+        [JsonProperty("crt")]
+        [JsonConverter(typeof(ObjectToPropertyDictionaryConverter), "actors")]
         public IReadOnlyDictionary<Character, IReadOnlyList<Person>> Characters { get; set; }
 
         /// <summary>
         /// 制作团队，键值为在本作品中的职务
         /// </summary>
+        [JsonProperty("staff")]
+        [JsonConverter(typeof(ObjectToPropertyDictionaryConverter), "jobs")]
         public IReadOnlyDictionary<Person, IReadOnlyList<string>> Staffs { get; set; }
 
+        /// <summary>
+        /// 讨论版留言列表
+        /// </summary>
+        [JsonProperty("topic")]
         public IReadOnlyList<Topic> Topics { get; set; }
+
+        /// <summary>
+        /// 日志文章列表
+        /// </summary>
+        [JsonProperty("blog")]
+        public IReadOnlyList<Blog> Blogs { get; set; }
     }
 
     /// <summary>
@@ -112,7 +140,7 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 该集的集号
         /// </summary>
-        public string Sort { get; set; }
+        public int Sort { get; set; }
 
         /// <summary>
         /// 该集的标题/名称
@@ -122,6 +150,7 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 该集的中文标题/名称
         /// </summary>
+        [JsonProperty("name_cn")]
         public string ChineseName { get; set; }
 
         /// <summary>
@@ -132,21 +161,24 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 该集放送日期
         /// </summary>
-        public DateTimeOffset AirDate { get; set; }
+        public DateTime AirDate { get; set; }
 
         /// <summary>
         /// 该集评论数目
         /// </summary>
+        [JsonProperty("comment")]
         public int CommentCount { get; set; }
 
         /// <summary>
         /// 该集的描述
         /// </summary>
+        [JsonProperty("desc")]
         public string Description { get; set; }
 
         /// <summary>
-        /// 该集的放松状态
+        /// 该集的放送状态
         /// </summary>
+        [JsonConverter(typeof(StringEnumConverter))]
         public EpisodeStatus Status { get; set; }
     }
 
@@ -192,26 +224,31 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 大图地址
         /// </summary>
+        [JsonProperty("large")]
         public string Large { get; set; }
 
         /// <summary>
         /// 常规大小图的地址
         /// </summary>
+        [JsonProperty("common")]
         public string Common { get; set; }
 
         /// <summary>
         /// 中图地址
         /// </summary>
+        [JsonProperty("medium")]
         public string Medium { get; set; }
 
         /// <summary>
         /// 小图地址
         /// </summary>
+        [JsonProperty("small")]
         public string Small { get; set; }
 
         /// <summary>
         /// 用于网格显示的图的地址
         /// </summary>
+        [JsonProperty("grid")]
         public string Grid { get; set; }
     }
 
@@ -253,7 +290,7 @@ namespace JacobZ.WebInterface.BangumiTv
 
     /// <summary>
     /// 代表收藏状态
-    /// </summary>
+    /// </summary> 
     public enum CollectionStatus
     {
         /// <summary>
@@ -271,7 +308,7 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 搁置
         /// </summary>
-        OnHold,
+        On_Hold, // XXX: 这里多个下划线是为了便于Enum.Parse，在Json.Net中无法在序列化为字典键值时自定义转换方法
         /// <summary>
         /// 抛弃
         /// </summary>
@@ -281,69 +318,39 @@ namespace JacobZ.WebInterface.BangumiTv
     /// <summary>
     /// 代表番组角色
     /// </summary>
-    public class Character
+    public class Character : Person
     {
         /// <summary>
-        /// 角色编号
+        /// 角色名
         /// </summary>
-        public uint ID { get; set; }
-
-        /// <summary>
-        /// 角色名字
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// 角色类型名
-        /// </summary>
-        public string RoleName { get; set; }
-
-        /// <summary>
-        /// 角色中文名
-        /// </summary>
-        public string ChineseName { get; set; }
-
-        /// <summary>
-        /// 角色图像
-        /// </summary>
-        public ImageSource Images { get; set; }
-
-        /// <summary>
-        /// 角色评论数
-        /// </summary>
-        public int CommentCount { get; set; }
-
-        /// <summary>
-        /// 角色收藏数
-        /// </summary>
-        public int CollectCount { get; set; }
-
-        /// <summary>
-        /// 角色人物信息
-        /// </summary>
-        public PersonInformation Information { get; set; }
+        [JsonProperty("role_name")]
+        [JsonConverter(typeof(RoleTypeConverter))]
+        public RoleType Role { get; set; }
     }
 
     /// <summary>
-    /// 代表一个别名/马甲名
+    /// 代表角色类型
     /// </summary>
-    public class AliasName
+    public enum RoleType
     {
         /// <summary>
-        /// 别名类型
+        /// 主角
         /// </summary>
-        public AliasNameType Type { get; set; }
-
+        Lead,
         /// <summary>
-        /// 别名名字
+        /// 配角
         /// </summary>
-        public string Name { get; set; }
+        Supporting,
+        /// <summary>
+        /// 客串
+        /// </summary>
+        Guest
     }
 
     /// <summary>
     /// 代表别名类型
     /// </summary>
-    public enum AliasNameType
+    public enum AliasType
     {
         /// <summary>
         /// 假名
@@ -356,7 +363,15 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 日语名
         /// </summary>
-        JP
+        JP,
+        /// <summary>
+        /// 昵称
+        /// </summary>
+        Nick,
+        /// <summary>
+        /// 自定义类型
+        /// </summary>
+        Misc
     }
 
     /// <summary>
@@ -377,6 +392,7 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 人物中文名
         /// </summary>
+        [JsonProperty("name_cn")]
         public string ChineseName { get; set; }
 
         /// <summary>
@@ -387,16 +403,19 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 评论数
         /// </summary>
+        [JsonProperty("comment")]
         public int CommentCount { get; set; }
 
         /// <summary>
         /// 收藏数
         /// </summary>
+        [JsonProperty("collects")]
         public int CollectCount { get; set; }
 
         /// <summary>
         /// 人物信息
         /// </summary>
+        [JsonProperty("info")]
         public PersonInformation Information { get; set; }
     }
 
@@ -406,18 +425,21 @@ namespace JacobZ.WebInterface.BangumiTv
     public class PersonInformation
     {
         /// <summary>
-        /// 信息
+        /// 生日信息
         /// </summary>
+        [JsonProperty("birth")]
         public string Birthday { get; set; } // TODO: 可考虑转换为DateTime
 
         /// <summary>
-        /// 人物别名
+        /// 人物别名。键为别名类型，值为别名内容
         /// </summary>
-        public IReadOnlyList<AliasName> Aliases { get; set; }
+        [JsonProperty("alias")]
+        public IReadOnlyDictionary<string, string> Aliases { get; set; }
 
         /// <summary>
         /// 人物性别
         /// </summary>
+        [JsonConverter(typeof(GenderConverter))]
         public bool? Gender { get; set; }
 
         /// <summary>
@@ -426,17 +448,17 @@ namespace JacobZ.WebInterface.BangumiTv
         public string BloodType { get; set; }
 
         /// <summary>
-        /// 身高
+        /// 身高描述
         /// </summary>
-        public int? Height { get; set; }
+        public string Height { get; set; }
 
         /// <summary>
-        /// 体重
+        /// 体重描述
         /// </summary>
-        public int? Weight { get; set; }
+        public string Weight { get; set; }
 
         /// <summary>
-        /// 三维
+        /// 三围
         /// </summary>
         public int[] BWH { get; set; }
 
@@ -464,21 +486,25 @@ namespace JacobZ.WebInterface.BangumiTv
         /// <summary>
         /// 关联条目ID
         /// </summary>
+        [JsonProperty("main_id")]
         public uint MainID { get; set; }
 
         /// <summary>
         /// 发布日期
         /// </summary>
+        [JsonConverter(typeof(UnixDateTimeConverter))]
         public DateTimeOffset Timestamp { get; set; }
 
         /// <summary>
         /// 讨论上次更新的日期
         /// </summary>
+        [JsonConverter(typeof(UnixDateTimeConverter))]
         public DateTimeOffset LastPost { get; set; }
 
         /// <summary>
         /// 回复数
         /// </summary>
+        [JsonProperty("replies")]
         public int ReplyCount { get; set; }
 
         /// <summary>
@@ -524,38 +550,41 @@ namespace JacobZ.WebInterface.BangumiTv
     }
 
     /// <summary>
-    /// （长篇）评论
+    /// 日志文章
     /// </summary>
     public class Blog
     {
         /// <summary>
-        /// 评论ID
+        /// 日志ID
         /// </summary>
         public uint ID { get; set; }
 
         /// <summary>
-        /// 评论标题
+        /// 日志标题
         /// </summary>
         public string Title { get; set; }
 
         /// <summary>
-        /// 评论内容简介
+        /// 日志内容简介
         /// </summary>
         public string Summary { get; set; }
 
         /// <summary>
-        /// 评论中的第一张图的地址
+        /// 日志中的第一张图的地址
         /// </summary>
+        [JsonProperty("image")]
         public string ThumbImage { get; set; } // XXX: 第一张图的链接，考虑略去？
 
         /// <summary>
         /// 回复数
         /// </summary>
+        [JsonProperty("replies")]
         public int ReplyCount { get; set; }
 
         /// <summary>
         /// 发布日期
         /// </summary>
+        [JsonConverter(typeof(UnixDateTimeConverter))]
         public DateTimeOffset Timestamp { get; set; }
 
         // 这个字段可以从Timestamp生成
